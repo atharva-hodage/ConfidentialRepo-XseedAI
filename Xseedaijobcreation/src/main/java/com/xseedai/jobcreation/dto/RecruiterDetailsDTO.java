@@ -10,9 +10,10 @@ import lombok.Data;
 @Data
 public class RecruiterDetailsDTO {
     
-    private Long id;
+    private long id;
      private String name;
      private String email;
     // private Set<Role> roles=new HashSet<>();
-     private byte[] imageData;  // New field for image data
+     private byte[] imageData; 
+
 }

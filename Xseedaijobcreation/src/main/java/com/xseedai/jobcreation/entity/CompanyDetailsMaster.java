@@ -4,6 +4,8 @@ import java.time.LocalDateTime;
 import java.util.ArrayList;
 import java.util.List;
 
+import com.fasterxml.jackson.annotation.JsonIgnore;
+
 import jakarta.persistence.CascadeType;
 import jakarta.persistence.Column;
 import jakarta.persistence.Entity;
@@ -34,6 +36,7 @@ public class CompanyDetailsMaster {
 	private String companyName;
 
 	@OneToMany(mappedBy = "companyDetailsMaster", cascade = CascadeType.ALL, fetch = FetchType.EAGER)
+	@JsonIgnore
 	private List<JobCreation> jobCreation = new ArrayList<>();
 
 	@Column(name = "createdBy", length = 36, nullable = false)

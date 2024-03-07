@@ -33,7 +33,7 @@ public class Country {
 	@GeneratedValue(strategy = GenerationType.IDENTITY)
 	@Column(name = "id")
 	private Long countryId;
-
+//
 	private String countryName;
 
 	@OneToMany(mappedBy = "country", cascade = CascadeType.ALL, fetch = FetchType.EAGER)
@@ -41,6 +41,7 @@ public class Country {
 	private List<State> state = new ArrayList<>();
 
 	@OneToMany(mappedBy = "country", cascade = CascadeType.ALL, fetch = FetchType.EAGER)
+	@JsonIgnore
 	private List<JobCreation> jobCreation = new ArrayList<>();
 //
 	@Column(name = "createdBy", length = 36, nullable = true)

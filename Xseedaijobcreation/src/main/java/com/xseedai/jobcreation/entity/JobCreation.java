@@ -40,18 +40,27 @@ public class JobCreation {
 	private Long jobId;
 
 	private String jobCode;
-
-	private Long userId;
 	
+	
+	@OneToOne(mappedBy="job")
+	private HiringTeam hiringTeam;
+	
+//	@ManyToOne
+//	@JoinColumn(name = "hiringteam_id")
+//	@JsonIgnore
+//	private HiringTeam hiringTeam;
+	
+	private Long userId;
+
 	@ManyToOne
 	@JoinColumn(name = "jobTitleId")
 	@JsonIgnore
 	private JobTitleMaster jobTitle;
-//
+	
 	@ManyToOne()
 	@JoinColumn(name = "companyId", nullable = false)
 	private CompanyDetailsMaster companyDetailsMaster;
-	
+
 	@ManyToOne()
 	@JoinColumn(name = "vmsId", nullable = false)
 	@JsonIgnore
@@ -62,15 +71,11 @@ public class JobCreation {
 	@JsonIgnore
 	private ClientMaster clientMaster;
 
-//    @OneToMany(mappedBy = "jobCreation", cascade = CascadeType.ALL, fetch = FetchType.EAGER)
-//    private List<JobType> jobType = new ArrayList<>();
 	@ManyToOne
 	@JoinColumn(name = "jobtypeId")
 	@JsonIgnore
 	private JobType jobtype;
-	//
-//    @OneToMany(mappedBy = "jobCreation", cascade = CascadeType.ALL, fetch = FetchType.EAGER)
-//    private List<Country> country = new ArrayList<>();
+
 	@ManyToOne
 	@JoinColumn(name = "country_id")
 	@JsonIgnore
@@ -86,8 +91,13 @@ public class JobCreation {
 	@JoinColumn(name = "city_id")
 	private City city;
 
-	private int numberOfOpenings;
 
+	@OneToMany(mappedBy = "jobCreation", cascade = CascadeType.ALL, fetch = FetchType.EAGER)
+	@JsonIgnore
+	private List<HiringCustomSubStage> hiringCustomSubStage = new ArrayList<>();
+	
+	private int numberOfOpenings;
+//
 	private Long maxSubmission;
 
 	private Long billRate;
@@ -104,8 +114,6 @@ public class JobCreation {
 
 	private Long duration;
 
-//    @OneToMany(mappedBy = "currency", cascade = CascadeType.ALL, fetch = FetchType.EAGER)
-//    private List<Currency> currency = new ArrayList<>();
 	@ManyToOne
 	@JoinColumn(name = "jobCurrencyId")
 	@JsonIgnore
@@ -115,6 +123,7 @@ public class JobCreation {
 	@JoinColumn(name = "jobPayRateId")
 	@JsonIgnore
 	private JobPayRate jobPayRate;
+	
 	
 	@ManyToOne
 	@JoinColumn(name = "jobStatusId")
@@ -126,7 +135,7 @@ public class JobCreation {
 
 	@Column(name = "createdOn", nullable = false)
 	private LocalDateTime createdOn;
-
+//
 	@Column(name = "modifiedBy", length = 36)
 	private String modifiedBy;
 
@@ -138,10 +147,9 @@ public class JobCreation {
 	@Column(name = "deleted")
 	private Boolean deleted = false;
 
-	// Getter method to check if the job is deleted
 	public boolean isDeleted() {
 		return deleted != null && deleted;
 	}
-
+//
 	private List<Long> skillId = new ArrayList<>();
 }

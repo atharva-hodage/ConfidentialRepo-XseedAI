@@ -3,19 +3,24 @@ import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageImpl;
 import org.springframework.data.domain.Pageable;
 import java.time.LocalDate;
+import java.time.LocalDateTime;
 import java.time.ZoneId;
 import java.time.temporal.ChronoUnit;
 import java.util.List;
 import java.util.stream.Collectors;
 
+import org.modelmapper.ModelMapper;
 import org.springframework.beans.factory.annotation.Autowired;
 
 import org.springframework.stereotype.Service;
 
+import com.xseedai.jobcreation.dto.JobCreationDto;
 import com.xseedai.jobcreation.dto.JobListingDto;
 import com.xseedai.jobcreation.entity.JobCreation;
+import com.xseedai.jobcreation.entity.JobStatus;
 import com.xseedai.jobcreation.entity.State;
 import com.xseedai.jobcreation.repository.JobCreationRepository;
+import com.xseedai.jobcreation.repository.JobStatusRepository;
 import com.xseedai.jobcreation.service.JobListingService;
 import org.springframework.data.jpa.domain.Specification;
 
@@ -24,7 +29,12 @@ public class JobListingServiceImpl implements JobListingService {
 
 	@Autowired
 	private JobCreationRepository jobCreationRepository;
-
+	
+	@Autowired
+    private  ModelMapper modelMapper;
+	
+	@Autowired
+	private JobStatusRepository jobStatusRepository;
 //	@Override
 //	public List<JobListingDto> getAllJobs() {
 //		List<JobCreation> jobCreations = jobCreationRepository.findAll();
@@ -247,6 +257,30 @@ public class JobListingServiceImpl implements JobListingService {
 	    return jobCreationRepository.findAll(spec, pageable).map(this::mapToDto);
 	}
 
+	@Override
+	public JobCreationDto closeJob(Long jobId) {
+		try {
+            JobCreation existingJob = jobCreationRepository.findById(jobId)
+                    .orElseThrow(() -> new IllegalArgumentException("Job not found with ID: " + jobId));
+
+            JobStatus closedStatus = jobStatusRepository.findById(2L) //  ID 2 corresponds to "Closed"
+                    .orElseThrow(() -> new IllegalArgumentException("Job Status not found with ID: 2")); // Adjust this exception message as needed
+
+            existingJob.setJobStatus(closedStatus); // Set the job status to "Closed"
+
+            // Set modified details
+            existingJob.setModifiedBy("API"); // here the name of the recruiter will be appended
+            existingJob.setModifiedOn(LocalDateTime.now());
+
+            JobCreation updatedJob = jobCreationRepository.save(existingJob);
+
+            return modelMapper.map(updatedJob, JobCreationDto.class);
+        } catch (Exception e) {
+            throw new RuntimeException("Failed to close job: " + e.getMessage());
+        }
+    }
+	}
+
 //	private JobListingDto mapToDto(JobCreation jobCreation) {
 //	    JobListingDto dto = new JobListingDto();
 //	    // Map fields from JobCreation to JobListingDto
@@ -269,4 +303,3 @@ public class JobListingServiceImpl implements JobListingService {
 //	}
 
 
-}

@@ -37,6 +37,7 @@ public class State {
 	private String stateName;
 
 	@OneToMany(mappedBy = "state", cascade = CascadeType.ALL, fetch = FetchType.EAGER)
+	@JsonIgnore
 	private List<JobCreation> jobCreation = new ArrayList<>();
 	
 	@OneToMany(mappedBy = "state", cascade = CascadeType.ALL, fetch = FetchType.EAGER)

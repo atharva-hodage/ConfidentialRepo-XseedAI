@@ -3,6 +3,7 @@ import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import java.util.List;
 
+import com.xseedai.jobcreation.dto.JobCreationDto;
 import com.xseedai.jobcreation.dto.JobListingDto;
 
 public interface JobListingService {
@@ -18,7 +19,8 @@ public interface JobListingService {
 	List<JobListingDto> getAllFilteredJob(List<Long> statuses, List<Long> companies, List<Long> vms,
 			List<String> expiring, List<Long> jobTypes, List<Long> clients);
 	
-	
+    JobCreationDto closeJob(Long jobId);
+
 	  Page<JobListingDto> searchJobs(String keyword, Pageable pageable);
 
 }

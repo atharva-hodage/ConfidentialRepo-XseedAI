@@ -46,6 +46,7 @@ public class VmsMaster {
 	private List<ClientMaster> clientMaster = new ArrayList<>();
 	
 	@OneToMany(mappedBy = "vmsMaster", cascade = CascadeType.ALL, fetch = FetchType.EAGER)
+	@JsonIgnore
 	private List<JobCreation> jobCreation = new ArrayList<>();
 
 	@Column(name = "createdBy", length = 36, nullable = false)

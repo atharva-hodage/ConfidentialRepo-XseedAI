@@ -58,19 +58,19 @@ public class JobCreationDto {
 
 	private Long duration;
 
-	private Long currencyId;
-	
 	private Long jobPayRateId;
+	
+	private Long currencyId;
 	
 	private Long jobStatusId;
 
-	private String createdBy;
+//	private String createdBy;
 //
-	private LocalDateTime createdOn;
-
-	private String modifiedBy;
-
-	private LocalDateTime modifiedOn;
+//	private LocalDateTime createdOn;
+//
+//	private String modifiedBy;
+//
+//	private LocalDateTime modifiedOn;
 
 	private String jobDescription;
 

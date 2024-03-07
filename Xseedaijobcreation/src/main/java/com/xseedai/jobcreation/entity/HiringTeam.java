@@ -17,14 +17,13 @@ import jakarta.persistence.OneToMany;
 import jakarta.persistence.OneToOne;
 import jakarta.persistence.Table;
 import lombok.AllArgsConstructor;
+import lombok.Data;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
 import lombok.Setter;
 
-@Getter
-@Setter
-@NoArgsConstructor
-@AllArgsConstructor
+
+@Data
 @Entity
 @Table(name = "hiring_team")
 public class HiringTeam {
@@ -33,9 +32,12 @@ public class HiringTeam {
     @Column(name = "id")
     private Long hiringTeamId;
 
-    @OneToOne
-    @JoinColumn(name = "job_id", unique = true, nullable = false)
+    @OneToOne(cascade = CascadeType.ALL)
+    @JoinColumn(name = "job_id")
     private JobCreation job;
+
+  
+
 
     //@Transient
     @JsonManagedReference

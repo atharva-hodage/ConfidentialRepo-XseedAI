@@ -3,12 +3,12 @@ package com.xseedai.jobcreation.service;
 import java.util.List;
 
 import org.springframework.http.ResponseEntity;
-
+import com.xseedai.jobcreation.entity.JobPayRate;
 import com.xseedai.jobcreation.dto.JobCreationDto;
 import com.xseedai.jobcreation.entity.CompanyDetailsMaster;
 import com.xseedai.jobcreation.entity.Currency;
+import com.xseedai.jobcreation.entity.HiringTeam;
 import com.xseedai.jobcreation.entity.JobCreation;
-import com.xseedai.jobcreation.entity.JobPayRate;
 import com.xseedai.jobcreation.entity.JobStatus;
 import com.xseedai.jobcreation.entity.JobTitleMaster;
 import com.xseedai.jobcreation.entity.JobType;
@@ -52,8 +52,8 @@ public interface JobCreationService {
 	JobPayRate getJobPayRateById(Long id);
 
 	JobPayRate getJobPayRateByName(String name);
-
-	JobCreationDto createJob(JobCreationDto jobCreationDTO, Long userId);
+	
+	JobCreationDto createJob(JobCreationDto jobCreationDTO,Long userId);
 
 	List<CompanyDetailsMaster> getAllCompanies();
 
@@ -67,8 +67,13 @@ public interface JobCreationService {
 
 	JobStatus createJobStatus(JobStatus jobStatus);
 
-	JobCreationDto updateJob(Long jobId, JobCreationDto jobCreationDto);
+//	JobCreationDto updateJob(Long jobId, JobCreationDto jobCreationDto);
 
 	void softDeleteJob(Long jobId);
+
+	JobCreationDto updateJob(Long userId, Long jobId, JobCreationDto jobCreationDto);
+	HiringTeam saveHiringTeam (Long jobCreationId);
+	
+	
 
 }

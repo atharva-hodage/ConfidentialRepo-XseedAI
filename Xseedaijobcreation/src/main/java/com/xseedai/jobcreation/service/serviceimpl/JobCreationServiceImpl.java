@@ -5,7 +5,7 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.Optional;
 import java.util.stream.Collectors;
-
+import com.xseedai.jobcreation.entity.JobPayRate;
 import org.modelmapper.ModelMapper;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.dao.EmptyResultDataAccessException;
@@ -19,21 +19,30 @@ import com.xseedai.jobcreation.entity.ClientMaster;
 import com.xseedai.jobcreation.entity.CompanyDetailsMaster;
 import com.xseedai.jobcreation.entity.Country;
 import com.xseedai.jobcreation.entity.Currency;
+import com.xseedai.jobcreation.entity.HiringCustomSubStage;
+import com.xseedai.jobcreation.entity.HiringDefaultSubStage;
+import com.xseedai.jobcreation.entity.HiringStage;
+import com.xseedai.jobcreation.entity.HiringTeam;
+import com.xseedai.jobcreation.entity.HiringTeamAccess;
+import com.xseedai.jobcreation.entity.HiringTeamMember;
 import com.xseedai.jobcreation.entity.JobCreation;
-import com.xseedai.jobcreation.entity.JobPayRate;
 import com.xseedai.jobcreation.entity.JobStatus;
 import com.xseedai.jobcreation.entity.JobTitleMaster;
 import com.xseedai.jobcreation.entity.JobType;
 import com.xseedai.jobcreation.entity.SkillsMaster;
 import com.xseedai.jobcreation.entity.State;
 import com.xseedai.jobcreation.entity.VmsMaster;
+import com.xseedai.jobcreation.feignclient.IdentityServiceFeignClient;
 import com.xseedai.jobcreation.repository.CityRepository;
 import com.xseedai.jobcreation.repository.ClientMasterRepository;
 import com.xseedai.jobcreation.repository.CompanyDetailsRepository;
 import com.xseedai.jobcreation.repository.CountryRepository;
 import com.xseedai.jobcreation.repository.CurrencyRepository;
+import com.xseedai.jobcreation.repository.HiringCustomSubStageRepository;
+import com.xseedai.jobcreation.repository.HiringDefaultSubStageRepository;
+import com.xseedai.jobcreation.repository.HiringTeamMemberRepository;
+import com.xseedai.jobcreation.repository.HiringTeamRepository;
 import com.xseedai.jobcreation.repository.JobCreationRepository;
-import com.xseedai.jobcreation.repository.JobPayRateRepository;
 import com.xseedai.jobcreation.repository.JobStatusRepository;
 import com.xseedai.jobcreation.repository.JobTitleRespository;
 import com.xseedai.jobcreation.repository.JobTypeRepository;
@@ -41,20 +50,18 @@ import com.xseedai.jobcreation.repository.SkillMasterRepository;
 import com.xseedai.jobcreation.repository.StateRepository;
 import com.xseedai.jobcreation.repository.VmsMasterRepository;
 import com.xseedai.jobcreation.service.JobCreationService;
+import com.xseedai.jobcreation.repository.JobPayRateRepository;
+import jakarta.transaction.Transactional;
 
 @Service
 public class JobCreationServiceImpl implements JobCreationService {
 
 	@Autowired
 	private JobTypeRepository jobTypeRepository;
-	
+
 	@Autowired
 	private CurrencyRepository currencyRepository;
 
-	@Autowired
-    private JobPayRateRepository jobPayRateRepository;
-
-	
 	@Autowired
 	JobCreationRepository jobCreationRepository;
 
@@ -72,21 +79,37 @@ public class JobCreationServiceImpl implements JobCreationService {
 
 	@Autowired
 	private CountryRepository countryRepository;
-	
+
 	@Autowired
 	private StateRepository stateRepository;
-	
+
 	@Autowired
 	private CityRepository cityRepository;
-	
+
 	@Autowired
 	private JobStatusRepository jobStatusRepository;
-	
+
 	@Autowired
 	private VmsMasterRepository vmsMasterRespository;
-	
+
 	@Autowired
 	private ClientMasterRepository clientMasterRespository;
+
+	@Autowired
+	private HiringDefaultSubStageRepository hiringDefaultSubStageRepository;
+	@Autowired
+	private HiringTeamMemberRepository hiringTeamMemberRepository;
+	@Autowired
+	private IdentityServiceFeignClient identityServiceFeignClient;
+
+	@Autowired
+	private HiringTeamRepository hiringTeamRepository;
+
+	@Autowired
+	private HiringCustomSubStageRepository hiringCustomSubStageRepository;
+	
+	@Autowired
+    private JobPayRateRepository jobPayRateRepository;
 
 	// Post Api for adding skills in database
 	@Override
@@ -187,8 +210,7 @@ public class JobCreationServiceImpl implements JobCreationService {
 	public List<Currency> getAllCurrencies() {
 		return currencyRepository.findAll();
 	}
-	
-	
+
 	 @Override
 	    public JobPayRate saveJobPayRate(JobPayRate jobPayRate) {
 	        return jobPayRateRepository.save(jobPayRate);
@@ -208,7 +230,8 @@ public class JobCreationServiceImpl implements JobCreationService {
 	    public JobPayRate getJobPayRateByName(String name) {
 	        return jobPayRateRepository.findByJobPayRateName(name);
 	    }
-
+	
+	
 	@Override
 	public List<CompanyDetailsMaster> getAllCompanies() {
 		return companyDetailsRepository.findAll();
@@ -244,11 +267,16 @@ public class JobCreationServiceImpl implements JobCreationService {
 		return jobStatusRepository.save(jobStatus);
 	}
 
-	
 	@Override
-	public JobCreationDto createJob(JobCreationDto jobCreationDTO,Long userId) {
-		  System.out.println("This is User Id Inside Service"+userId);
+	@Transactional 
+	public JobCreationDto createJob(JobCreationDto jobCreationDTO, Long userId) {
+		System.out.println("This is User Id Inside Service" + userId);
 		try {
+			ResponseEntity<String> response = identityServiceFeignClient.getUsernameByUserId(userId);
+			if (!response.getStatusCode().is2xxSuccessful()) {
+				throw new RuntimeException("Failed to retrieve username for userId: " + userId);
+			}
+			String createdBy = response.getBody();
 			Optional<CompanyDetailsMaster> companies = companyDetailsRepository.findById(jobCreationDTO.getCompanyId());
 			CompanyDetailsMaster company = companies.get();
 
@@ -261,7 +289,6 @@ public class JobCreationServiceImpl implements JobCreationService {
 
 			Optional<Currency> currencies = currencyRepository.findById(jobCreationDTO.getCurrencyId());
 			Currency currency = currencies.get();
-
 			Optional<JobPayRate> jobPayRates = jobPayRateRepository.findById(jobCreationDTO.getJobPayRateId());
 			JobPayRate jobPayRate = jobPayRates.get();
 			Optional<JobType> jbtype = jobTypeRepository.findById(jobCreationDTO.getJobTypeId());
@@ -296,6 +323,8 @@ public class JobCreationServiceImpl implements JobCreationService {
 			jobCreation.setUserId(userId);
 			jobCreation.setVmsMaster(vmsMaster);
 			jobCreation.setClientMaster(clientMaster);
+			jobCreation.setCreatedBy(createdBy);
+
 			jobCreation.setJobCode(jobCreationDTO.getJobCode());
 			jobCreation.setNumberOfOpenings(jobCreationDTO.getNumberOfOpenings());
 			jobCreation.setMaxSubmission(jobCreationDTO.getMaxSubmission());
@@ -308,205 +337,99 @@ public class JobCreationServiceImpl implements JobCreationService {
 			jobCreation.setDuration(jobCreationDTO.getDuration());
 			jobCreation.setJobDescription(jobCreationDTO.getJobDescription());
 			jobCreation.setSkillId(jobCreationDTO.getSkillIds());
-			jobCreation.setCreatedBy(jobCreationDTO.getCreatedBy());
-			jobCreation.setCreatedOn(jobCreationDTO.getCreatedOn());
-			jobCreation.setModifiedBy(jobCreationDTO.getModifiedBy());
-			jobCreation.setModifiedOn(jobCreationDTO.getModifiedOn());
-//			System.out.println("THis is User Id from Job Creation"+jobCreation.getUserId());
-			// Save job entity
+			jobCreation.setModifiedBy(createdBy);
+			jobCreation.setCreatedOn(LocalDateTime.now());
+
+			jobCreation.setModifiedOn(LocalDateTime.now());
+
+			List<HiringDefaultSubStage> hiringSubStageList = hiringDefaultSubStageRepository.findAll();
+
 			JobCreation savedJob = jobCreationRepository.save(jobCreation);
-			System.out.println("THis is User Id from Job Creation"+savedJob.getUserId());
-			// Map the saved job entity back to JobCreationDto and return
+			System.out.println("Saved job"+ savedJob);
+			 HiringTeam hiringTeam = new HiringTeam();
+		        hiringTeam.setJob(savedJob);
+		        HiringTeam hiringTeam1 = hiringTeamRepository.save(hiringTeam);
+			
+			for (HiringDefaultSubStage defaultSubStage : hiringSubStageList) {
+				HiringStage defaultSubStageHiringStage = defaultSubStage.getStage();
+				HiringCustomSubStage customSubStage = new HiringCustomSubStage();
+				customSubStage.setCustomStageName(defaultSubStage.getSubStageName());
+				customSubStage.setStage(defaultSubStageHiringStage);
+				customSubStage.setJobCreation(jobCreation);
+				customSubStage.setSelected(true);
+				customSubStage.setDefault(true);
+
+				hiringCustomSubStageRepository.save(customSubStage);
+			}
+
+			 HiringTeamAccess defaultMemberAccess = new HiringTeamAccess();
+             defaultMemberAccess.setAccessId(3L);
+             
+             
+             HiringTeamMember defaultHiringTeamMember= new HiringTeamMember();
+             defaultHiringTeamMember.setTeamMemberId(userId);
+             defaultHiringTeamMember.setName(createdBy);
+             defaultHiringTeamMember.setRole("Job Admin");
+             defaultHiringTeamMember.setHiringTeam(hiringTeam);
+             defaultHiringTeamMember.setHiringTeamAccess(defaultMemberAccess);
+             defaultHiringTeamMember.setEmail("abc@gmail.com");
+             hiringTeamMemberRepository.save(defaultHiringTeamMember);
+			
+		        
 			return modelMapper.map(savedJob, JobCreationDto.class);
 		} catch (Exception e) {
-			// Handle exceptions
+			System.out.println(e);
 			throw new RuntimeException("Failed to create job: " + e.getMessage());
 		}
 	}
-	
-	
-	
-//	@Override
-//	public JobCreationDto createJob(JobCreationDto jobCreationDTO) {
-//		try {
-//			Optional<CompanyDetailsMaster> companies = companyDetailsRepository.findById(jobCreationDTO.getCompanyId());
-//			CompanyDetailsMaster company = companies.get();
-//
-//			JobTitleMaster jobTitleMaster = jobTitleRepository.findById(jobCreationDTO.getJobTitleId())
-//					.orElseThrow(() -> new IllegalArgumentException(
-//							"Job Title not found with ID: " + jobCreationDTO.getJobTitleId()));
-//			JobStatus jobStatus = jobStatusRepository.findById(jobCreationDTO.getJobStatusId())
-//					.orElseThrow(() -> new IllegalArgumentException(
-//							"Job Status not found with ID: " + jobCreationDTO.getJobStatusId()));
-//
-//			Optional<Currency> currencies = currencyRepository.findById(jobCreationDTO.getCurrencyId());
-//			Currency currency = currencies.get();
-//
-//			Optional<JobType> jbtype = jobTypeRepository.findById(jobCreationDTO.getJobTypeId());
-//			JobType jobType = jbtype.get();
-//			if (jobType == null) {
-//				throw new IllegalArgumentException("Job Type not found with ID: " + jobCreationDTO.getJobTypeId());
-//			}
-//			Optional<Country> countries = countryRepository.findById(jobCreationDTO.getCountryId());
-//			Country country = countries.get();
-//			Optional<State> states = stateRepository.findById(jobCreationDTO.getStateId());
-//			State state = states.get();
-//
-//			Optional<City> cities = cityRepository.findById(jobCreationDTO.getCityId());
-//			City city = cities.get();
-//			JobCreation jobCreation = new JobCreation();
-//
-//			Optional<VmsMaster> vmsMasters = vmsMasterRespository.findById(jobCreationDTO.getVmsMasterId());
-//			VmsMaster vmsMaster = vmsMasters.get();
-//
-//			Optional<ClientMaster> clientMasters = clientMasterRespository.findById(jobCreationDTO.getClientMasterId());
-//			ClientMaster clientMaster = clientMasters.get();
-//
-//			jobCreation.setCompanyDetailsMaster(company);
-//			jobCreation.setJobTitle(jobTitleMaster);
-//			jobCreation.setJobStatus(jobStatus);
-//			jobCreation.setCurrency(currency);
-//
-//			jobCreation.setJobtype(jobType);
-//			jobCreation.setCountry(country);
-//			jobCreation.setState(state);
-//			jobCreation.setCity(city);
-//			jobCreation.setVmsMaster(vmsMaster);
-//			jobCreation.setClientMaster(clientMaster);
-//			jobCreation.setJobCode(jobCreationDTO.getJobCode());
-//			jobCreation.setNumberOfOpenings(jobCreationDTO.getNumberOfOpenings());
-//			jobCreation.setMaxSubmission(jobCreationDTO.getMaxSubmission());
-//			jobCreation.setBillRate(jobCreationDTO.getBillRate());
-//			jobCreation.setMinimumPayRate(jobCreationDTO.getMinimumPayRate());
-//			jobCreation.setRequirementOpenDate(jobCreationDTO.getRequirementOpenDate());
-//			jobCreation.setRequirementCloseDate(jobCreationDTO.getRequirementCloseDate());
-//			jobCreation.setContractStartDate(jobCreationDTO.getContractStartDate());
-//			jobCreation.setContractEndDate(jobCreationDTO.getContractEndDate());
-//			jobCreation.setDuration(jobCreationDTO.getDuration());
-//			jobCreation.setJobDescription(jobCreationDTO.getJobDescription());
-//			jobCreation.setSkillId(jobCreationDTO.getSkillIds());
-//			jobCreation.setCreatedBy(jobCreationDTO.getCreatedBy());
-//			jobCreation.setCreatedOn(jobCreationDTO.getCreatedOn());
-//			jobCreation.setModifiedBy(jobCreationDTO.getModifiedBy());
-//			jobCreation.setModifiedOn(jobCreationDTO.getModifiedOn());
-//
-//			// Save job entity
-//			JobCreation savedJob = jobCreationRepository.save(jobCreation);
-//
-//			// Map the saved job entity back to JobCreationDto and return
-//			return modelMapper.map(savedJob, JobCreationDto.class);
-//		} catch (Exception e) {
-//			// Handle exceptions
-//			throw new RuntimeException("Failed to create job: " + e.getMessage());
-//		}
-//	}
 
+//	 public HiringTeam createHiringTeam(Long jobId) {
+//		 try {
+//			 System.out.println("\n\n\n\n This is inside createHiringTeam"+jobId);
+//		        JobCreation job = jobCreationRepository.findById(jobId)
+//		                                                .orElseThrow(() -> new IllegalArgumentException("Job not found with ID: " + jobId));
+//		        System.out.println("THis is Job Title inside "+job.getJobTitle());
+//		        HiringTeam hiringTeam = new HiringTeam();
+//		        hiringTeam.setJob(job);
+//		        System.out.println("THis is Job Inside Hiring Team"+hiringTeam.getJob().getJobTitle());
+//		        HiringTeam hiringTeam1 = hiringTeamRepository.save(hiringTeam);
+//		        System.out.println("THis is hiringTeam1"+hiringTeam1.getJob().getJobCode());
+//		        return hiringTeam1;
+//		    } catch (Exception e) {
+//		        throw new RuntimeException("Failed to create hiring team: " + e.getMessage());
+//		    }
+//     }
+//	
 //	@Override
-//	public JobCreationDto updateJob(Long jobId, JobCreationDto jobCreationDto) {
-//		try {
-//			JobCreation existingJob = jobCreationRepository.findById(jobId)
-//					.orElseThrow(() -> new IllegalArgumentException("Job not found with ID: " + jobId));
-//
-//			if (!existingJob.getJobStatus().getStatus().equalsIgnoreCase("Open")) {
-//				throw new IllegalArgumentException("Job status is not open. Title cannot be updated.");
-//			}
-//
-//			// Fetch related entities
-//			CompanyDetailsMaster company = companyDetailsRepository.findById(jobCreationDto.getCompanyId()).orElseThrow(
-//					() -> new IllegalArgumentException("Company not found with ID: " + jobCreationDto.getCompanyId()));
-//
-//			Currency currency = currencyRepository.findById(jobCreationDto.getCurrencyId())
-//					.orElseThrow(() -> new IllegalArgumentException(
-//							"Currency not found with ID: " + jobCreationDto.getCurrencyId()));
-//
-//			JobType jobType = jobTypeRepository.findById(jobCreationDto.getJobTypeId()).orElseThrow(
-//					() -> new IllegalArgumentException("Job Type not found with ID: " + jobCreationDto.getJobTypeId()));
-//
-//			Country country = countryRepository.findById(jobCreationDto.getCountryId()).orElseThrow(
-//					() -> new IllegalArgumentException("Country not found with ID: " + jobCreationDto.getCountryId()));
-//
-//			State state = stateRepository.findById(jobCreationDto.getStateId()).orElseThrow(
-//					() -> new IllegalArgumentException("State not found with ID: " + jobCreationDto.getStateId()));
-//
-//			City city = cityRepository.findById(jobCreationDto.getCityId()).orElseThrow(
-//					() -> new IllegalArgumentException("City not found with ID: " + jobCreationDto.getCityId()));
-//
-//			VmsMaster vmsMaster = vmsMasterRespository.findById(jobCreationDto.getVmsMasterId())
-//					.orElseThrow(() -> new IllegalArgumentException(
-//							"VMS Master not found with ID: " + jobCreationDto.getVmsMasterId()));
-//
-//			ClientMaster clientMaster = clientMasterRespository.findById(jobCreationDto.getClientMasterId())
-//					.orElseThrow(() -> new IllegalArgumentException(
-//							"Client Master not found with ID: " + jobCreationDto.getClientMasterId()));
-//
-//			// Update job entity
-//			existingJob.setCompanyDetailsMaster(company);
-//			existingJob.setJobStatus(jobStatusRepository.findById(jobCreationDto.getJobStatusId())
-//					.orElseThrow(() -> new IllegalArgumentException(
-//							"Job Status not found with ID: " + jobCreationDto.getJobStatusId())));
-//			existingJob.setCurrency(currency);
-//			existingJob.setJobtype(jobType);
-//			existingJob.setCountry(country);
-//			existingJob.setState(state);
-//			existingJob.setCity(city);
-//			existingJob.setVmsMaster(vmsMaster);
-//			existingJob.setClientMaster(clientMaster);
-//			existingJob.setJobCode(jobCreationDto.getJobCode());
-//			existingJob.setNumberOfOpenings(jobCreationDto.getNumberOfOpenings());
-//			existingJob.setMaxSubmission(jobCreationDto.getMaxSubmission());
-//			existingJob.setBillRate(jobCreationDto.getBillRate());
-//			existingJob.setMinimumPayRate(jobCreationDto.getMinimumPayRate());
-//			existingJob.setRequirementOpenDate(jobCreationDto.getRequirementOpenDate());
-//			existingJob.setRequirementCloseDate(jobCreationDto.getRequirementCloseDate());
-//			existingJob.setContractStartDate(jobCreationDto.getContractStartDate());
-//			existingJob.setContractEndDate(jobCreationDto.getContractEndDate());
-//			existingJob.setDuration(jobCreationDto.getDuration());
-//			existingJob.setJobDescription(jobCreationDto.getJobDescription());
-//			existingJob.setSkillId(jobCreationDto.getSkillIds());
-//			existingJob.setModifiedBy(jobCreationDto.getModifiedBy());
-//			existingJob.setModifiedOn(LocalDateTime.now());
-//
-//			// Update job title if job status is open
-//			if (existingJob.getJobStatus().getStatus().equals("Open")) {
-//				JobTitleMaster jobTitleMaster = jobTitleRepository.findById(jobCreationDto.getJobTitleId())
-//						.orElseThrow(() -> new IllegalArgumentException(
-//								"Job Title not found with ID: " + jobCreationDto.getJobTitleId()));
-//				existingJob.setJobTitle(jobTitleMaster);
-//			}
-//
-//			// Save the updated job entity
-//			JobCreation updatedJob = jobCreationRepository.save(existingJob);
-//
-//			// Map the updated job entity back to JobCreationDto and return
-//			return modelMapper.map(updatedJob, JobCreationDto.class);
-//		} catch (Exception e) {
-//			// Handle exceptions
-//			throw new RuntimeException("Failed to update job: " + e.getMessage());
-//		}
+//	public HiringTeam saveHiringTeam(Long jobCreationId) {
+//		
+//		JobCreation jobCreated = jobCreationRepository.findById(jobCreationId).get();
+//		HiringTeam hiringTeam = new HiringTeam();
+//		hiringTeam.setJob(jobCreated);
+//		hiringTeam.setTeamMembers(null);
+//		hiringTeamRepository.save(hiringTeam);
+//		return hiringTeam;
 //	}
-
+//	
 	
 	@Override
-	public JobCreationDto updateJob(Long jobId, JobCreationDto jobCreationDto) {
+	public JobCreationDto updateJob(Long userId, Long jobId, JobCreationDto jobCreationDto) {
 		try {
+			ResponseEntity<String> response = identityServiceFeignClient.getUsernameByUserId(userId);
+			if (!response.getStatusCode().is2xxSuccessful()) {
+				throw new RuntimeException("Failed to retrieve username for userId: " + userId);
+			}
+			String modifiedBy = response.getBody();
 			JobCreation existingJob = jobCreationRepository.findById(jobId)
 					.orElseThrow(() -> new IllegalArgumentException("Job not found with ID: " + jobId));
 
-//			if (!existingJob.getJobStatus().getStatus().equalsIgnoreCase("Open")) {
-//				throw new IllegalArgumentException("Job status is not open. Title cannot be updated.");
-//			}
-
-			// Fetch related entities
 			CompanyDetailsMaster company = companyDetailsRepository.findById(jobCreationDto.getCompanyId()).orElseThrow(
 					() -> new IllegalArgumentException("Company not found with ID: " + jobCreationDto.getCompanyId()));
 
 			Currency currency = currencyRepository.findById(jobCreationDto.getCurrencyId())
 					.orElseThrow(() -> new IllegalArgumentException(
 							"Currency not found with ID: " + jobCreationDto.getCurrencyId()));
-			Optional<JobPayRate> jobPayRates = jobPayRateRepository.findById(jobCreationDto.getJobPayRateId());
-			JobPayRate jobPayRate = jobPayRates.get();
-			
-			
+
 			JobType jobType = jobTypeRepository.findById(jobCreationDto.getJobTypeId()).orElseThrow(
 					() -> new IllegalArgumentException("Job Type not found with ID: " + jobCreationDto.getJobTypeId()));
 
@@ -530,29 +453,20 @@ public class JobCreationServiceImpl implements JobCreationService {
 			JobStatus jobStatus = jobStatusRepository.findById(jobCreationDto.getJobStatusId())
 					.orElseThrow(() -> new IllegalArgumentException(
 							"Job Status Master not found with ID: " + jobCreationDto.getJobStatusId()));
-			// Update job entity
 			existingJob.setCompanyDetailsMaster(company);
-//			existingJob.setJobStatus(jobStatusRepository.findById(jobCreationDto.getJobStatusId())
-//					.orElseThrow(() -> new IllegalArgumentException(
-//							"Job Status not found with ID: " + jobCreationDto.getJobStatusId())));
+
 			if (existingJob.getJobStatus().getStatus().equals("Open")) {
 				JobTitleMaster jobTitleMaster = jobTitleRepository.findById(jobCreationDto.getJobTitleId())
 						.orElseThrow(() -> new IllegalArgumentException(
 								"Job Title not found with ID: " + jobCreationDto.getJobTitleId()));
 				existingJob.setJobTitle(jobTitleMaster);
+			} else {
+
+				System.out.println("Cannot change job title as job status is not Open.");
 			}
-			else {
-			    // Display message indicating that job title cannot be changed
-				
-			    System.out.println("Cannot change job title as job status is not Open.");
-			}
-//			if (existingJob.getJobStatus().getStatus().equalsIgnoreCase("Open")) {
-//				existingJob.setJobtype(jobType);
-//				//throw new IllegalArgumentException("Job status is not open. Title cannot be updated.");
-//			}
+
 			existingJob.setJobStatus(jobStatus);
 			existingJob.setCurrency(currency);
-			existingJob.setJobPayRate(jobPayRate);
 			existingJob.setJobtype(jobType);
 			existingJob.setCountry(country);
 			existingJob.setState(state);
@@ -571,11 +485,8 @@ public class JobCreationServiceImpl implements JobCreationService {
 			existingJob.setDuration(jobCreationDto.getDuration());
 			existingJob.setJobDescription(jobCreationDto.getJobDescription());
 			existingJob.setSkillId(jobCreationDto.getSkillIds());
-			existingJob.setModifiedBy(jobCreationDto.getModifiedBy());
+			existingJob.setModifiedBy(modifiedBy);
 			existingJob.setModifiedOn(LocalDateTime.now());
-
-//			// Update job title if job status is open
-
 
 			// Save the updated job entity
 			JobCreation updatedJob = jobCreationRepository.save(existingJob);
@@ -587,8 +498,7 @@ public class JobCreationServiceImpl implements JobCreationService {
 			throw new RuntimeException("Failed to update job: " + e.getMessage());
 		}
 	}
-	
-	
+
 	@Override
 	public void softDeleteJob(Long jobId) {
 		JobCreation job = jobCreationRepository.findById(jobId)
@@ -600,5 +510,11 @@ public class JobCreationServiceImpl implements JobCreationService {
 
 		job.setDeleted(true);
 		jobCreationRepository.save(job);
+	}
+
+	@Override
+	public HiringTeam saveHiringTeam(Long jobCreationId) {
+		// TODO Auto-generated method stub
+		return null;
 	}
 }

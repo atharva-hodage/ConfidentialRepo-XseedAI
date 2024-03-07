@@ -2,7 +2,7 @@ package com.xseedai.jobcreation.controller;
 
 import java.security.Key;
 import java.util.List;
-
+import com.xseedai.jobcreation.entity.JobPayRate;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
@@ -20,8 +20,8 @@ import io.swagger.v3.oas.annotations.responses.ApiResponse;
 import com.xseedai.jobcreation.dto.JobCreationDto;
 import com.xseedai.jobcreation.entity.CompanyDetailsMaster;
 import com.xseedai.jobcreation.entity.Currency;
+import com.xseedai.jobcreation.entity.HiringTeam;
 import com.xseedai.jobcreation.entity.JobCreation;
-import com.xseedai.jobcreation.entity.JobPayRate;
 import com.xseedai.jobcreation.entity.JobStatus;
 import com.xseedai.jobcreation.entity.JobTitleMaster;
 import com.xseedai.jobcreation.entity.JobType;
@@ -177,7 +177,6 @@ public class JobCreationController {
 		List<Currency> currencies = jobCreationService.getAllCurrencies();
 		return new ResponseEntity<>(currencies, HttpStatus.OK);
 	}
-
 	
 	 @PostMapping("/saveJobPayRate")
 	 @Operation(summary = "Save JobPayRate", description = "Creates a new JobPayRate.")
@@ -220,6 +219,7 @@ public class JobCreationController {
 	
 	
 	
+
 	@GetMapping("/getAllCompanies")
 	@Operation(summary = "Get all companies", description = "Retrieves a list of all companies.")
 	@ApiResponse(responseCode = "200", description = "List of companies retrieved successfully")
@@ -278,30 +278,7 @@ public class JobCreationController {
 		return ResponseEntity.status(HttpStatus.CREATED).body(createdJobStatus);
 	}
 
-//	@PostMapping("/create")
-//	@Operation(summary = "Create job", description = "Creates a new job.")
-//	@ApiResponses(value = { @ApiResponse(responseCode = "201", description = "Job created successfully"),
-//			@ApiResponse(responseCode = "400", description = "Bad request"),
-//			@ApiResponse(responseCode = "500", description = "Internal server error") })
-//	public ResponseEntity<JobCreationDto> createJob(@RequestBody JobCreationDto jobCreationDto) {
-//		try {
-//			JobCreationDto createdJob = jobCreationService.createJob(jobCreationDto);
-//			return ResponseEntity.status(HttpStatus.CREATED).body(createdJob);
-//		} catch (IllegalArgumentException e) {
-//			return ResponseEntity.badRequest().body(null);
-//		} catch (Exception e) {
-//			return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body(null);
-//		}
-//	}
-    // Decode the JWT token
-//    Claims claims = Jwts.parser().setSigningKey("5367566B59703373367639792F423F4528482B4D6251655468576D5A71347437").parseClaimsJws(jwtToken).getBody();
-//	 byte[] keyBytes = Decoders.BASE64.decode("5367566B59703373367639792F423F4528482B4D6251655468576D5A71347437");
-//	Key keys =  Keys.hmacShaKeyFor(keyBytes);
-//	Claims claims = Jwts.parserBuilder().setSigningKey(keys).build().parseClaimsJws(jwtToken).getBody();
-//    // Extract user ID from the decoded JWT claims
-//    Long userId = Long.parseLong(claims.get("userId").toString());
-//    System.out.println("This is User Id"+userId);
-    // Call service method passing user ID
+
 	@PostMapping("/create")
 	@Operation(summary = "Create job", description = "Creates a new job.")
 	@ApiResponses(value = { 
@@ -310,14 +287,12 @@ public class JobCreationController {
 	    @ApiResponse(responseCode = "500", description = "Internal server error") 
 	})
 	public ResponseEntity<JobCreationDto> createJob(@RequestHeader("loggedInUser") String jwtToken, @RequestBody JobCreationDto jobCreationDto) {
-//		System.out.println("This is jwtToken"+jwtToken);
+		System.out.println("This is jwtToken"+jwtToken);
 		try {
 
 			Long userId = Long.parseLong(jwtToken);
-			System.out.println("\n\n\n\n This is User Id"+userId);
 	        JobCreationDto createdJob = jobCreationService.createJob(jobCreationDto, userId);
-	        System.out.println("This is Company Id"+createdJob.getCompanyId());
-	        //
+	        
 	        return ResponseEntity.status(HttpStatus.CREATED).body(createdJob);
 	    } catch (IllegalArgumentException e) {
 	        return ResponseEntity.badRequest().body(null);
@@ -325,20 +300,30 @@ public class JobCreationController {
 	        return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body(null);
 	    }
 	}
-//	  private Key getSignKey() {
-//	        byte[] keyBytes = Decoders.BASE64.decode(SECRET);
-//	        return Keys.hmacShaKeyFor(keyBytes);
-//	    }
+
+	@PostMapping("/createHiringTeam")
+	public ResponseEntity<HiringTeam> createHiringTeam(@RequestParam Long jobCreationId){
+		try {
+		HiringTeam hiringTeam = jobCreationService.saveHiringTeam(jobCreationId);
+		  return ResponseEntity.status(HttpStatus.CREATED).body(hiringTeam);
+		}catch (IllegalArgumentException e) {
+	        return ResponseEntity.badRequest().body(null);
+	    } catch (Exception e) {
+	        return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body(null);
+	    }
+	}
+	
 	    
 	@PutMapping("/update")
 	@Operation(summary = "Update job", description = "Updates an existing job.")
 	@ApiResponses(value = { @ApiResponse(responseCode = "200", description = "Job updated successfully"),
 			@ApiResponse(responseCode = "400", description = "Bad request"),
 			@ApiResponse(responseCode = "500", description = "Internal server error") })
-	public ResponseEntity<JobCreationDto> updateJob(@RequestParam Long jobId,
+	public ResponseEntity<JobCreationDto> updateJob(@RequestHeader("loggedInUser") String jwtToken,@RequestParam Long jobId,
 			@RequestBody JobCreationDto jobCreationDto) {
 		try {
-			JobCreationDto updatedJob = jobCreationService.updateJob(jobId, jobCreationDto);
+			Long userId = Long.parseLong(jwtToken);
+			JobCreationDto updatedJob = jobCreationService.updateJob(userId,jobId, jobCreationDto);
 			return ResponseEntity.ok(updatedJob);
 		} catch (IllegalArgumentException e) {
 			return ResponseEntity.badRequest().body(null);
