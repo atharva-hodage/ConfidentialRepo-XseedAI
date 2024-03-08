@@ -10,12 +10,12 @@ import com.xseedai.jobcreation.entity.HiringTeamAccess;
 import com.xseedai.jobcreation.entity.HiringTeamMember;
 
 public interface HiringTeamMemberService {
-	HiringTeamMember addHiringTeamMember(RecruiterDetailsDTO recruiterDetailsDTO, Long hiringTeamId);
+	HiringTeamMember addHiringTeamMember(RecruiterDetailsDTO recruiterDetailsDTO, Long hiringTeamId,Long userId);
 	List<RecruiterDetailsDTO> getRecruitersByEmail(String email);
 	ResponseEntity<List<RecruiterDetailsDTO>> getUsersByRoleId();
     HiringTeamAccess addAccess(HiringTeamAccess access);
     HiringTeam createHiringTeam(Long jobId);
-    
+    HiringTeamMember getAccessLevelByUserId(Long userId);
     HiringTeamMember updateTeamMemberAccess(Long teamMemberId, Long accessId);
 
 

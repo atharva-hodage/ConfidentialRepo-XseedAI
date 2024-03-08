@@ -28,6 +28,9 @@ public class HiringTeamMember {
 	    @Column(name = "id")
 	    private Long teamMemberId;
 
+	   @Column(name = "user_id")
+	   private Long userId;
+	   
 	    @JsonBackReference 
 	    @ManyToOne
 	    @JoinColumn(name = "hiring_team_id", nullable = false)

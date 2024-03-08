@@ -50,22 +50,26 @@ public class HiringTeamMemberServiceImpl implements HiringTeamMemberService{
          return identityServiceFeignClient.getUsersByRoleId();
      }
      @Override
-        public HiringTeamMember addHiringTeamMember(RecruiterDetailsDTO recruiterDetailsDTO, Long hiringTeamId) {
-            // Map RecruiterDetailsDTO to HiringTeamMember
+        public HiringTeamMember addHiringTeamMember(RecruiterDetailsDTO recruiterDetailsDTO, Long hiringTeamId,Long userId) {
+        
             HiringTeamMember hiringTeamMember = modelMapper.map(recruiterDetailsDTO, HiringTeamMember.class);
 
-         // Set the profile image data separately
           hiringTeamMember.setImageData(recruiterDetailsDTO.getImageData());
-            // Set default role and access
+            
             hiringTeamMember.setRole("Recruiter");
        
-            Long defaultAccessId = 1L; // Replace with the actual default accessId
+            Long defaultAccessId = 1L; 
             HiringTeamAccess defaultAccess = getDefaultAccessById(defaultAccessId);
-            
+        
             hiringTeamMember.setHiringTeamAccess(defaultAccess);
-            // Validate or perform any necessary logic before saving
+          
+            
+            
+            List<RecruiterDetailsDTO> recruiterList = getRecruitersByEmail(recruiterDetailsDTO.getEmail());
+            RecruiterDetailsDTO recruiter = recruiterList.get(0);
 
-            // Set the hiringTeamId
+            
+            hiringTeamMember.setUserId(recruiter.getId());      
             HiringTeam hiringTeam = hiringTeamRepository.findById(hiringTeamId)
                     .orElseThrow(() -> new IllegalArgumentException("Hiring Team not found with ID: " + hiringTeamId));
             hiringTeamMember.setHiringTeam(hiringTeam);
@@ -77,6 +81,16 @@ public class HiringTeamMemberServiceImpl implements HiringTeamMemberService{
             return hiringTeamAccessRepository.findByAccessId(accessId)
                     .orElseThrow(() -> new IllegalStateException("Default access with ID " + accessId + " not found in the database."));
         }
+     
+     @Override
+     public HiringTeamMember getAccessLevelByUserId(Long userId) {
+         HiringTeamMember member = hiringTeamMemberRepository.findByUserId(userId);
+         if (member != null) {
+             return member;
+         }
+         return null;
+     }
+     
      
      @Override
      public HiringTeamAccess addAccess(HiringTeamAccess access) {

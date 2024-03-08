@@ -10,6 +10,7 @@ import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.PutMapping;
 import org.springframework.web.bind.annotation.RequestBody;
+import org.springframework.web.bind.annotation.RequestHeader;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
@@ -37,10 +38,22 @@ public class HiringTeamController {
 	}
 
 	@PostMapping("/addHiringTeamMember")
-	public ResponseEntity<HiringTeamMember> addHiringTeamMember(@RequestBody RecruiterDetailsDTO recruiterDetailsDTO,
+	public ResponseEntity<HiringTeamMember> addHiringTeamMember(@RequestHeader("loggedInUser") String loggedInUser,@RequestBody RecruiterDetailsDTO recruiterDetailsDTO,
 			@RequestParam Long hiringTeamId) {
-		HiringTeamMember savedMember = hiringTeamMemberService.addHiringTeamMember(recruiterDetailsDTO, hiringTeamId);
-		return new ResponseEntity<>(savedMember, HttpStatus.CREATED);
+		Long userId = Long.parseLong(loggedInUser);
+		HiringTeamMember loggedInMember = hiringTeamMemberService.getAccessLevelByUserId(userId);
+		 if (loggedInMember != null && (loggedInMember.getHiringTeamAccess().getAccessName().equals("Edit Access") || loggedInMember.getHiringTeamAccess().getAccessName().equals("Admin Access"))) {
+	            // User has EDIT or ADMIN access, proceed with adding the team member
+			 HiringTeamMember savedMember = hiringTeamMemberService.addHiringTeamMember(recruiterDetailsDTO, hiringTeamId,userId);
+				return new ResponseEntity<>(savedMember, HttpStatus.CREATED);
+	        } 
+		 
+		 
+	            // User does not have sufficient access level
+	            return ResponseEntity.status(HttpStatus.FORBIDDEN).build();
+	        
+	    
+		
 	}
 
 	@PostMapping("/addaccess")
@@ -60,8 +73,19 @@ public class HiringTeamController {
 	    }
 	  
 
-	    @PutMapping("/{teamMemberId}/access/{accessId}")
-	    public HiringTeamMember updateTeamMemberAccess(@PathVariable Long teamMemberId, @PathVariable Long accessId) {
-	        return hiringTeamMemberService.updateTeamMemberAccess(teamMemberId, accessId);
+	    @PutMapping("/editAccess")
+	    public ResponseEntity<HiringTeamMember> updateTeamMemberAccess(@RequestHeader("loggedInUser") String loggedInUser,@RequestParam Long teamMemberId, @RequestParam Long accessId) {
+	    	 Long userId = Long.parseLong(loggedInUser);
+	    	    HiringTeamMember loggedInMember = hiringTeamMemberService.getAccessLevelByUserId(userId);
+	    	    
+	    	    if (loggedInMember != null && (loggedInMember.getHiringTeamAccess().getAccessName().equals("Edit Access") || loggedInMember.getHiringTeamAccess().getAccessName().equals("Admin Access"))) {
+	    	        // User has EDIT or ADMIN access, proceed with updating the team member's access
+	    	        HiringTeamMember updatedMember = hiringTeamMemberService.updateTeamMemberAccess(teamMemberId, accessId);
+	    	        return ResponseEntity.ok(updatedMember);
+	    	    } 
+	    	        // User does not have sufficient access level
+	    	        return ResponseEntity.status(HttpStatus.FORBIDDEN).build();
+	    	  
 	    }
+//	    hiringTeamMemberService.updateTeamMemberAccess(teamMemberId, accessId);
 }

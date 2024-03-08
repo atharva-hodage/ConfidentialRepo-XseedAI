@@ -5,5 +5,5 @@ import org.springframework.data.jpa.repository.JpaRepository;
 import com.xseedai.jobcreation.entity.HiringTeamMember;
 
 public interface HiringTeamMemberRepository extends JpaRepository<HiringTeamMember, Long>{
-
+	HiringTeamMember findByUserId(Long userId);
 }

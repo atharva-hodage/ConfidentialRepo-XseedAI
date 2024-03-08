@@ -28,3 +28,4 @@ public class HiringStage {
     private String hiringStageName;
     
 }
+

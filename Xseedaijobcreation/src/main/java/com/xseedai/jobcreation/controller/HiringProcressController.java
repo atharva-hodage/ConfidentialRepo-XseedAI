@@ -10,6 +10,7 @@ import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.PutMapping;
 import org.springframework.web.bind.annotation.RequestBody;
+import org.springframework.web.bind.annotation.RequestHeader;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
@@ -26,12 +27,13 @@ import com.xseedai.jobcreation.service.HiringProcressService;
 import com.xseedai.jobcreation.service.HiringTeamMemberService;
 
 @RestController
-@RequestMapping("/api/hiringprocess")
+@RequestMapping("/api/jobcreation")
 public class HiringProcressController {
 	@Autowired
 	private HiringProcressService hiringProcressService;
 
-
+	@Autowired
+	private HiringTeamMemberService hiringTeamMemberService;
 
 	@PostMapping("/hiringstage")
 	public ResponseEntity<HiringStage> addHiringStage(@RequestBody HiringStage hiringStage) {
@@ -60,20 +62,45 @@ public class HiringProcressController {
 //	}
 
 	
+//	@PostMapping("/hiringCustomSubStage")
+//	public ResponseEntity<HiringCustomSubStage> addHiringCustomSubStage(
+//			@RequestHeader("loggedInUser") String loggedInUser,
+//	        @RequestParam String customStageName,
+//	        @RequestParam Long jobCreationId,
+//	        @RequestParam Long hiringStageId) {
+//	    try {
+//	        HiringCustomSubStage hiringCustomSubStage = hiringProcressService
+//	                .addHiringCustomSubStage(customStageName, jobCreationId, hiringStageId);
+//	        return ResponseEntity.ok(hiringCustomSubStage);
+//	    } catch (IllegalArgumentException e) {
+//	        return ResponseEntity.badRequest().body(null);
+//	    }
+//	}
+	
+	
 	@PostMapping("/hiringCustomSubStage")
 	public ResponseEntity<HiringCustomSubStage> addHiringCustomSubStage(
+	        @RequestHeader("loggedInUser") String loggedInUser,
 	        @RequestParam String customStageName,
 	        @RequestParam Long jobCreationId,
 	        @RequestParam Long hiringStageId) {
-	    try {
-	        HiringCustomSubStage hiringCustomSubStage = hiringProcressService
-	                .addHiringCustomSubStage(customStageName, jobCreationId, hiringStageId);
-	        return ResponseEntity.ok(hiringCustomSubStage);
-	    } catch (IllegalArgumentException e) {
-	        return ResponseEntity.badRequest().body(null);
+	    Long userId = Long.parseLong(loggedInUser);
+	    HiringTeamMember loggedInMember = hiringTeamMemberService.getAccessLevelByUserId(userId);
+	    
+	    if (loggedInMember != null && (loggedInMember.getHiringTeamAccess().getAccessName().equals("Edit Access") || loggedInMember.getHiringTeamAccess().getAccessName().equals("Admin Access"))) {
+	        
+	        try {
+	            HiringCustomSubStage hiringCustomSubStage = hiringProcressService.addHiringCustomSubStage(customStageName, jobCreationId, hiringStageId);
+	            return ResponseEntity.ok(hiringCustomSubStage);
+	        } catch (IllegalArgumentException e) {
+	            return ResponseEntity.badRequest().body(null);
+	        }
+	    } else {
+	        // User does not have sufficient access level
+	        return ResponseEntity.status(HttpStatus.FORBIDDEN).build();
 	    }
 	}
-	
+
 	
 	@GetMapping("/gethiringstage/{stageId}/job/{jobCreationId}")
 	public List<HiringCustomSubStageDto> getCustomSubStagesByStageAndJob(@PathVariable Long stageId,
@@ -87,17 +114,57 @@ public class HiringProcressController {
 //	        return ResponseEntity.status(HttpStatus.NO_CONTENT).build();
 //	    }
 
-	@DeleteMapping("/switchToDefault/{jobId}")
-	public List<HiringCustomSubStageDto> switchToDefault(@PathVariable Long jobId) {
-		return hiringProcressService.switchToDefault(jobId);
-	}
+//	@DeleteMapping("/switchToDefault/{jobId}")
+//	public List<HiringCustomSubStageDto> switchToDefault(@PathVariable Long jobId) {
+//		return hiringProcressService.switchToDefault(jobId);
+//	}
 
-	@PutMapping("/updateSubStageSelection")
-	public ResponseEntity<String> updateSubStageSelection(@RequestBody List<Long> subStageIds) {
-		return hiringProcressService.updateSubStageSelection(subStageIds);
+	
+	@DeleteMapping("/switchToDefault/{jobId}")
+	public ResponseEntity<List<HiringCustomSubStageDto>> switchToDefault(@RequestHeader("loggedInUser") String loggedInUser,
+	        @PathVariable Long jobId) {
+	    Long userId = Long.parseLong(loggedInUser);
+	    HiringTeamMember loggedInMember = hiringTeamMemberService.getAccessLevelByUserId(userId);
+	    
+	    if (loggedInMember != null && (loggedInMember.getHiringTeamAccess().getAccessName().equals("Edit Access") || loggedInMember.getHiringTeamAccess().getAccessName().equals("Admin Access"))) {
+	        // User has EDIT or ADMIN access, proceed with switching to default substage
+	        List<HiringCustomSubStageDto> result = hiringProcressService.switchToDefault(jobId);
+	        return ResponseEntity.ok(result);
+	    } else {
+	        // User does not have sufficient access level
+	        return ResponseEntity.status(HttpStatus.FORBIDDEN).build();
+	    }
 	}
 
 	
+	
+//	@PutMapping("/updateSubStageSelection")
+//	public ResponseEntity<String> updateSubStageSelection(@RequestBody List<Long> subStageIds) {
+//		return hiringProcressService.updateSubStageSelection(subStageIds);
+//	}
+//
+//	
+	
+	@PutMapping("/updateSubStageSelection")
+	public ResponseEntity<String> updateSubStageSelection(@RequestHeader("loggedInUser") String loggedInUser,
+	        @RequestBody List<Long> subStageIds) {
+	    Long userId = Long.parseLong(loggedInUser);
+	    HiringTeamMember loggedInMember = hiringTeamMemberService.getAccessLevelByUserId(userId);
+	    
+	    if (loggedInMember != null && (loggedInMember.getHiringTeamAccess().getAccessName().equals("Edit Access") || loggedInMember.getHiringTeamAccess().getAccessName().equals("Admin Access"))) {
+	        // User has EDIT or ADMIN access, proceed with updating substage selection
+	        try {
+	        	 return  hiringProcressService.updateSubStageSelection(subStageIds);
+	           
+	        } catch (Exception e) {
+	            return ResponseEntity.badRequest().body(e.getMessage());
+	        }
+	    } else {
+	        // User does not have sufficient access level
+	        return ResponseEntity.status(HttpStatus.FORBIDDEN).build();
+	    }
+	}
+
   
 
 }

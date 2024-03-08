@@ -14,6 +14,7 @@ import org.springframework.http.ResponseEntity;
 import org.springframework.stereotype.Service;
 
 import com.xseedai.jobcreation.dto.JobCreationDto;
+import com.xseedai.jobcreation.dto.RecruiterDetailsDTO;
 import com.xseedai.jobcreation.entity.City;
 import com.xseedai.jobcreation.entity.ClientMaster;
 import com.xseedai.jobcreation.entity.CompanyDetailsMaster;
@@ -278,8 +279,29 @@ public class JobCreationServiceImpl implements JobCreationService {
 			}
 			String createdBy = response.getBody();
 			Optional<CompanyDetailsMaster> companies = companyDetailsRepository.findById(jobCreationDTO.getCompanyId());
+			 
+			
+			  ResponseEntity<List<RecruiterDetailsDTO>> recruitersResponse = identityServiceFeignClient.getUsersByRoleId();
+	            if (!response.getStatusCode().is2xxSuccessful()) {
+	                throw new RuntimeException("Failed to retrieve username for userId: " + userId);
+	            }
+			
+			
+			if (!recruitersResponse.getStatusCode().is2xxSuccessful()) {
+                  throw new RuntimeException("Failed to retrieve recruiters information");
+              }
+            List<RecruiterDetailsDTO> recruitersList = recruitersResponse.getBody();
+            
+          // Find the recruiter by user ID
+            RecruiterDetailsDTO recruiter = recruitersList.stream()
+                    .filter(r -> r.getId() == userId)
+                    .findFirst()
+                    .orElseThrow(() -> new RuntimeException("Recruiter not found with ID: " + userId));
+         
+			
+			
 			CompanyDetailsMaster company = companies.get();
-
+			
 			JobTitleMaster jobTitleMaster = jobTitleRepository.findById(jobCreationDTO.getJobTitleId())
 					.orElseThrow(() -> new IllegalArgumentException(
 							"Job Title not found with ID: " + jobCreationDTO.getJobTitleId()));
@@ -369,10 +391,11 @@ public class JobCreationServiceImpl implements JobCreationService {
              HiringTeamMember defaultHiringTeamMember= new HiringTeamMember();
              defaultHiringTeamMember.setTeamMemberId(userId);
              defaultHiringTeamMember.setName(createdBy);
-             defaultHiringTeamMember.setRole("Job Admin");
-             defaultHiringTeamMember.setHiringTeam(hiringTeam);
+             defaultHiringTeamMember.setRole("Manager");
+             defaultHiringTeamMember.setUserId(userId);
+             defaultHiringTeamMember.setHiringTeam(hiringTeam1);
              defaultHiringTeamMember.setHiringTeamAccess(defaultMemberAccess);
-             defaultHiringTeamMember.setEmail("abc@gmail.com");
+             defaultHiringTeamMember.setEmail(recruiter.getEmail());
              hiringTeamMemberRepository.save(defaultHiringTeamMember);
 			
 		        
